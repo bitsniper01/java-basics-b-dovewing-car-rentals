@@ -1,57 +1,61 @@
 package com.dovewing.rentaltracker;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /** Stores information about a vehicle in the rental fleet. */
 public class Vehicle {
-    public static final String ECONOMY = "ECONOMY";
-    public static final String PREMIUM = "PREMIUM";
-    public static final String AVAILABLE = "AVAILABLE";
-    public static final String RENTED = "RENTED";
+    private static final AtomicInteger NEXT_ID = new AtomicInteger(1);
 
-    private static int nextId = 1;
-
-    private int id;
-    private String model;
-    private String registration;
-    private double dailyRate;
-    private double deposit;
-    private String category;
-    private String status;
+    private final int id;
+    private final String model;
+    private final String registration;
+    private final double dailyRate;
+    private final double deposit;
+    private final VehicleCategory category;
+    private VehicleStatus status;
 
     public Vehicle(String model, String reg, double dailyRate,
-                   double deposit, String category) {
+                   double deposit, VehicleCategory category) {
         if (model == null || model.isBlank()) {
             throw new IllegalArgumentException("Vehicle model is required.");
         }
         if (reg == null || reg.isBlank()) {
             throw new IllegalArgumentException("Vehicle registration is required.");
         }
-        if (dailyRate < 0 || deposit < 0) {
-            throw new IllegalArgumentException("Rate and deposit cannot be negative.");
+        if (!Double.isFinite(dailyRate) || !Double.isFinite(deposit)
+                || dailyRate < 0 || deposit < 0) {
+            throw new IllegalArgumentException("Rate and deposit must be finite and cannot be negative.");
+        }
+        if (category == null) {
+            throw new IllegalArgumentException("A vehicle category is required.");
         }
 
-        this.id = nextId++;
+        this.id = NEXT_ID.getAndIncrement();
         this.model = model;
         this.registration = reg;
         this.dailyRate = dailyRate;
         this.deposit = deposit;
         this.category = category;
-        this.status = AVAILABLE;
+        this.status = VehicleStatus.AVAILABLE;
     }
 
-    /** Applies the original deposit rule for cars. */
+    /** Delegates deposit calculation to the vehicle category's policy. */
     public double calculateDeposit(Renter renter) {
-        if (Renter.MEMBER.equals(renter.getKind())) {
-            return 0.0;
+        return category.calculateDeposit(renter, deposit);
+    }
+
+    void markRented() {
+        if (status != VehicleStatus.AVAILABLE) {
+            throw new IllegalStateException("This vehicle is already rented.");
         }
-        return deposit;
+        status = VehicleStatus.RENTED;
     }
 
-    public void markRented() {
-        status = RENTED;
-    }
-
-    public void markAvailable() {
-        status = AVAILABLE;
+    void markAvailable() {
+        if (status != VehicleStatus.RENTED) {
+            throw new IllegalStateException("This vehicle is not rented.");
+        }
+        status = VehicleStatus.AVAILABLE;
     }
 
     public int getId() {
@@ -74,11 +78,11 @@ public class Vehicle {
         return deposit;
     }
 
-    public String getCategory() {
+    public VehicleCategory getCategory() {
         return category;
     }
 
-    public String getStatus() {
+    public VehicleStatus getStatus() {
         return status;
     }
 }
