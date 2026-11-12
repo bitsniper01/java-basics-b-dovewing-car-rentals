@@ -5,12 +5,15 @@ import java.util.List;
 
 /** Manages the vehicles, renters and rentals for one depot. */
 public class Depot {
-    private String name;
-    private List<Vehicle> vehicles;
-    private List<Renter> renters;
-    private List<Rental> rentals;
+    private final String name;
+    private final List<Vehicle> vehicles;
+    private final List<Renter> renters;
+    private final List<Rental> rentals;
 
     public Depot(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Depot name is required.");
+        }
         this.name = name;
         this.vehicles = new ArrayList<>();
         this.renters = new ArrayList<>();
@@ -18,6 +21,9 @@ public class Depot {
     }
 
     public void addVehicle(Vehicle vehicle) {
+        if (vehicle == null) {
+            throw new IllegalArgumentException("A vehicle is required.");
+        }
         for (Vehicle existingVehicle : vehicles) {
             if (existingVehicle.getRegistration().equalsIgnoreCase(vehicle.getRegistration())) {
                 throw new IllegalArgumentException("That registration is already in the fleet.");
@@ -27,6 +33,9 @@ public class Depot {
     }
 
     public void addRenter(Renter renter) {
+        if (renter == null) {
+            throw new IllegalArgumentException("A renter is required.");
+        }
         renters.add(renter);
     }
 
@@ -40,15 +49,11 @@ public class Depot {
         if (days <= 0) {
             throw new IllegalArgumentException("Rental days must be greater than zero.");
         }
-        if (!Vehicle.AVAILABLE.equals(vehicle.getStatus())) {
+        if (vehicle.getStatus() != VehicleStatus.AVAILABLE) {
             throw new IllegalStateException("This vehicle is already rented.");
         }
 
-        // Work out the price before changing the vehicle's status.
-        double cost = vehicle.getDailyRate() * days;
-        double deposit = vehicle.calculateDeposit(renter);
-
-        Rental rental = new Rental(renter, vehicle, days, cost, deposit);
+        Rental rental = new Rental(renter, vehicle, days);
         rentals.add(rental);
         renter.addRentalToHistory(rental);
         vehicle.markRented();
@@ -62,10 +67,9 @@ public class Depot {
         }
 
         for (Rental rental : rentals) {
-            if (rental.getVehicle() == vehicle && Rental.ACTIVE.equals(rental.getStatus())) {
+            if (rental.getVehicle() == vehicle && rental.getStatus() == RentalStatus.ACTIVE) {
                 rental.markReturned();
                 vehicle.markAvailable();
-                System.out.println("Returned " + vehicle.getModel() + " (" + vehicle.getRegistration() + ")");
                 return;
             }
         }
@@ -85,23 +89,7 @@ public class Depot {
         return new ArrayList<>(rentals);
     }
 
-    public void printReport() {
-        System.out.println();
-        System.out.println("=== " + name + " - end of day ===");
-        System.out.println("Fleet status:");
-        for (Vehicle vehicle : vehicles) {
-            System.out.println("  " + vehicle.getModel() + " (" + vehicle.getRegistration()
-                    + ", " + vehicle.getCategory() + "): " + vehicle.getStatus());
-        }
-
-        System.out.println("Active rentals:");
-        for (Rental rental : rentals) {
-            if (Rental.ACTIVE.equals(rental.getStatus())) {
-                System.out.println("  Rental #" + rental.getId() + ": "
-                        + rental.getVehicle().getRegistration() + " -> "
-                        + rental.getRenter().getName() + " ("
-                        + rental.getDays() + " days)");
-            }
-        }
+    public String getName() {
+        return name;
     }
 }
