@@ -2,34 +2,35 @@ package com.dovewing.rentaltracker;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** Stores information about a customer who rents vehicles. */
 public class Renter {
-    public static final String CASUAL = "CASUAL";
-    public static final String MEMBER = "MEMBER";
+    private static final AtomicInteger NEXT_ID = new AtomicInteger(1);
 
-    private static int nextId = 1;
+    private final int id;
+    private final String name;
+    private final RenterType renterType;
+    private final List<Rental> history;
 
-    private int id;
-    private String name;
-    private String kind;
-    private List<Rental> history;
-
-    public Renter(String name, String kind) {
+    public Renter(String name, RenterType renterType) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Renter name is required.");
         }
-        if (!CASUAL.equals(kind) && !MEMBER.equals(kind)) {
-            throw new IllegalArgumentException("Renter must be CASUAL or MEMBER.");
+        if (renterType == null) {
+            throw new IllegalArgumentException("A renter type is required.");
         }
 
-        this.id = nextId++;
+        this.id = NEXT_ID.getAndIncrement();
         this.name = name;
-        this.kind = kind;
+        this.renterType = renterType;
         this.history = new ArrayList<>();
     }
 
-    public void addRentalToHistory(Rental rental) {
+    void addRentalToHistory(Rental rental) {
+        if (rental == null) {
+            throw new IllegalArgumentException("A rental is required.");
+        }
         history.add(rental);
     }
 
@@ -45,7 +46,7 @@ public class Renter {
         return name;
     }
 
-    public String getKind() {
-        return kind;
+    public RenterType getRenterType() {
+        return renterType;
     }
 }
